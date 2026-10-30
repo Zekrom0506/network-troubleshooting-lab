@@ -99,7 +99,7 @@ written up like a real support ticket: symptom, commands used, root cause, and f
 ## Quick start
 
 ```bash
-git clone https://github.com/<your-username>/network-troubleshooting-lab.git
+git clone https://github.com/Zekrom0506/network-troubleshooting-lab.git
 cd network-troubleshooting-lab
 ./lab.sh up
 ```
