@@ -1,0 +1,131 @@
+# ---------------------------------------------------------------------------
+#  Network Troubleshooting Lab - Containerlab topology
+#
+#                     +---------+
+#                     |   isp   |  AS 65100  (simulated Internet, owns 8.8.8.8 / 1.1.1.1)
+#                     +----+----+
+#                          | eBGP   203.0.113.0/30
+#                     +----+----+
+#                     |   r1    |  AS 65001  edge router
+#                     +--+---+--+
+#              10.0.12.0/30 |   | 10.0.13.0/30
+#                  +--------+   +--------+
+#             +----+----+           +----+----+
+#             |   r2    |-----------|   r3    |   core routers
+#             +----+----+ 10.0.23/30+----+----+
+#              10.0.24.0/30 |           | 10.0.34.0/30
+#                  +--------+   +-------+
+#                     +--+---+--+
+#                     |   r4    |  LAN gateway: VLAN sub-interfaces, DHCP, firewall
+#                     +----+----+
+#                          | 802.1Q trunk (VLAN 10 + 20)
+#                     +----+----+
+#                     |   sw1   |  Linux VLAN-aware bridge (access switch)
+#                     +--+---+--+
+#              VLAN 10   |   |   VLAN 20
+#                  +-----+   +-----+
+#               +--+--+         +--+--+
+#               | pc1 |         | pc2 |
+#               +-----+         +-----+
+#              Staff LAN        Guest LAN
+#           192.168.10.0/24   192.168.20.0/24
+#
+#  OSPF area 0 runs between r1, r2, r3 and r4.
+#  r1 learns a default route from the ISP over eBGP and injects it into OSPF.
+# ---------------------------------------------------------------------------
+
+name: netlab
+
+topology:
+  # Every node is a plain Linux container. Routers use the FRR image unless
+  # a node says otherwise.
+  defaults:
+    kind: linux
+    image: netlab-router:1.0
+
+  nodes:
+    # ----- the 5 routers (all FRRouting) -----
+    isp:
+      binds:
+        - configs/daemons:/etc/frr/daemons
+        - configs/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/isp/frr.conf:/etc/frr/frr.conf
+        - scripts/router-setup.sh:/lab/router-setup.sh
+      exec:
+        - sh /lab/router-setup.sh
+
+    r1:
+      binds:
+        - configs/daemons:/etc/frr/daemons
+        - configs/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/r1/frr.conf:/etc/frr/frr.conf
+        - scripts/router-setup.sh:/lab/router-setup.sh
+      exec:
+        - sh /lab/router-setup.sh
+
+    r2:
+      binds:
+        - configs/daemons:/etc/frr/daemons
+        - configs/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/r2/frr.conf:/etc/frr/frr.conf
+        - scripts/router-setup.sh:/lab/router-setup.sh
+      exec:
+        - sh /lab/router-setup.sh
+
+    r3:
+      binds:
+        - configs/daemons:/etc/frr/daemons
+        - configs/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/r3/frr.conf:/etc/frr/frr.conf
+        - scripts/router-setup.sh:/lab/router-setup.sh
+      exec:
+        - sh /lab/router-setup.sh
+
+    r4:
+      binds:
+        - configs/daemons:/etc/frr/daemons
+        - configs/vtysh.conf:/etc/frr/vtysh.conf
+        - configs/r4/frr.conf:/etc/frr/frr.conf
+        - configs/r4/dnsmasq.conf:/lab/dnsmasq.conf
+        - configs/r4/firewall.sh:/lab/firewall.sh
+        - configs/r4/setup.sh:/lab/setup.sh
+        - scripts/router-setup.sh:/lab/router-setup.sh
+      exec:
+        - sh /lab/router-setup.sh
+        - sh /lab/setup.sh
+
+    # ----- LAN switch and end hosts (plain Linux containers) -----
+    sw1:
+      image: netlab-host:1.0
+      binds:
+        - configs/sw1/setup.sh:/lab/setup.sh
+      exec:
+        - sh /lab/setup.sh
+
+    pc1:
+      image: netlab-host:1.0
+      binds:
+        - configs/pc1/setup.sh:/lab/setup.sh
+      exec:
+        - sh /lab/setup.sh
+
+    pc2:
+      image: netlab-host:1.0
+      binds:
+        - configs/pc2/setup.sh:/lab/setup.sh
+      exec:
+        - sh /lab/setup.sh
+
+  links:
+    # eBGP link to the ISP
+    - endpoints: ["isp:eth1", "r1:eth1"]
+    # OSPF core links
+    - endpoints: ["r1:eth2", "r2:eth1"]
+    - endpoints: ["r1:eth3", "r3:eth1"]
+    - endpoints: ["r2:eth2", "r3:eth2"]
+    - endpoints: ["r2:eth3", "r4:eth1"]
+    - endpoints: ["r3:eth3", "r4:eth2"]
+    # LAN: r4 trunk to the switch, switch access ports to the PCs
+    - endpoints: ["r4:eth3", "sw1:eth1"]
+    - endpoints: ["sw1:eth2", "pc1:eth1"]
+    - endpoints: ["sw1:eth3", "pc2:eth1"]

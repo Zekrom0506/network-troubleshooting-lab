@@ -1,0 +1,5 @@
+# Folder containerlab creates while the lab is running
+clab-netlab/
+*.bak
+.*.bak
+.DS_Store
