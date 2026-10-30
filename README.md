@@ -21,35 +21,43 @@ written up like a real support ticket: symptom, commands used, root cause, and f
 
 ## Topology
 
-```
-                    +---------+
-                    |   isp   |  AS 65100   "Internet": 8.8.8.8, 1.1.1.1
-                    +----+----+
-                         |  eBGP   203.0.113.0/30
-                    +----+----+
-                    |   r1    |  AS 65001   edge router
-                    +--+---+--+
-          10.0.12.0/30 |   | 10.0.13.0/30
-              +--------+   +--------+
-         +----+----+           +----+----+
-         |   r2    |-----------|   r3    |  core routers
-         +----+----+ 10.0.23/30+----+----+
-          10.0.24.0/30 |           | 10.0.34.0/30
-              +--------+   +-------+
-                    +--+---+--+
-                    |   r4    |  LAN gateway: VLANs, DHCP, firewall
-                    +----+----+
-                         |  802.1Q trunk (VLAN 10 + 20)
-                    +----+----+
-                    |   sw1   |  Linux VLAN-aware bridge
-                    +--+---+--+
-              VLAN 10  |   |  VLAN 20
-                 +-----+   +-----+
-              +--+--+         +--+--+
-              | pc1 |         | pc2 |
-              +-----+         +-----+
-            Staff LAN        Guest LAN
-         192.168.10.0/24   192.168.20.0/24
+```mermaid
+flowchart TB
+    subgraph INTERNET["🌐 Simulated Internet - AS 65100"]
+        ISP["<b>isp</b><br/>8.8.8.8 · 1.1.1.1"]
+    end
+
+    subgraph CORE["🏢 Company network - AS 65001 · OSPF area 0"]
+        R1["<b>r1</b><br/>Edge router"]
+        R2["<b>r2</b><br/>Core router"]
+        R3["<b>r3</b><br/>Core router"]
+        R4["<b>r4</b><br/>LAN gateway<br/>DHCP + Firewall"]
+    end
+
+    subgraph LAN["💻 Office LAN"]
+        SW1["<b>sw1</b><br/>VLAN switch"]
+        PC1["<b>pc1</b><br/>Staff · VLAN 10<br/>192.168.10.0/24"]
+        PC2["<b>pc2</b><br/>Guest · VLAN 20<br/>192.168.20.0/24"]
+    end
+
+    ISP ---|"eBGP<br/>203.0.113.0/30"| R1
+    R1 ---|"10.0.12.0/30"| R2
+    R1 ---|"10.0.13.0/30"| R3
+    R2 ---|"10.0.23.0/30"| R3
+    R2 ---|"10.0.24.0/30"| R4
+    R3 ---|"10.0.34.0/30"| R4
+    R4 ---|"802.1Q trunk<br/>VLAN 10 + 20"| SW1
+    SW1 ---|"VLAN 10"| PC1
+    SW1 ---|"VLAN 20"| PC2
+
+    classDef isp fill:#fde2e4,stroke:#c0392b,color:#000
+    classDef router fill:#dbeafe,stroke:#1d4ed8,color:#000
+    classDef gw fill:#fef3c7,stroke:#b45309,color:#000
+    classDef host fill:#dcfce7,stroke:#15803d,color:#000
+    class ISP isp
+    class R1,R2,R3 router
+    class R4 gw
+    class SW1,PC1,PC2 host
 ```
 
 | Node | Role | Software |
