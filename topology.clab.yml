@@ -36,6 +36,14 @@
 
 name: netlab
 
+# Management network (eth0 on every node, used only by Docker/containerlab).
+# We use our own name and an uncommon subnet so it never clashes with other
+# Docker networks that already exist on your computer.
+mgmt:
+  network: netlab-mgmt
+  ipv4-subnet: 10.254.254.0/24
+  ipv6-subnet: 3fff:10:254:254::/64
+
 topology:
   # Every node is a plain Linux container. Routers use the FRR image unless
   # a node says otherwise.
